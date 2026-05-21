@@ -1,0 +1,68 @@
+import { StageConfig } from '../types/game';
+
+export const STAGE_CONFIGS: StageConfig[] = [
+  {
+    stage: 1,
+    targetEggs: 5,
+    pigeonCount: 2,
+    fallSpeed: 2,
+    poopRatio: 0.2,
+    hasBoss: false,
+  },
+  {
+    stage: 2,
+    targetEggs: 8,
+    pigeonCount: 3,
+    fallSpeed: 2.5,
+    poopRatio: 0.25,
+    hasBoss: false,
+  },
+  {
+    stage: 3,
+    targetEggs: 10,
+    pigeonCount: 3,
+    fallSpeed: 3,
+    poopRatio: 0.3,
+    hasBoss: false,
+  },
+  {
+    stage: 4,
+    targetEggs: 12,
+    pigeonCount: 4,
+    fallSpeed: 3.5,
+    poopRatio: 0.35,
+    hasBoss: false,
+  },
+  {
+    stage: 5,
+    targetEggs: 15,
+    pigeonCount: 5,
+    fallSpeed: 4,
+    poopRatio: 0.4,
+    hasBoss: false,
+  },
+  {
+    stage: 6,
+    targetEggs: 20,
+    pigeonCount: 6,
+    fallSpeed: 5,
+    poopRatio: 0.45,
+    hasBoss: true,
+  },
+  {
+    stage: 7,
+    targetEggs: 25,
+    pigeonCount: 7,
+    fallSpeed: 5.5,
+    poopRatio: 0.5,
+    hasBoss: true,
+  },
+  {
+    stage: 8,
+    targetEggs: 30,
+    pigeonCount: 8,
+    fallSpeed: 6,
+    poopRatio: 0.55,
+    hasBoss: true,
+  },
+];
