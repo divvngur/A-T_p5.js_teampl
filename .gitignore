@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+dist/
+*.log
+
+# Uploaded/reference prototype exports
+Pigeon Poop Game Development*/
+
+# Local editor/runtime files
+.vscode/
+.idea/
