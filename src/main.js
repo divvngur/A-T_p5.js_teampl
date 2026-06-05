@@ -91,6 +91,9 @@ window.showScreen = function(id) {
 
   // p5 인스턴스 정리
   if (window.APP.p5Instance) {
+    if (typeof window.APP.p5Instance.disposeHDFaceGame === 'function') {
+      window.APP.p5Instance.disposeHDFaceGame();
+    }
     window.APP.p5Instance.remove();
     window.APP.p5Instance = null;
   }

@@ -59,8 +59,8 @@ window.ResultScreen = {
 
     const startCurrentMode = () => {
       LoadingScreen.init(() => {
-        showScreen('camera-screen');
-        CameraSetupScreen.init();
+        showScreen('game-screen');
+        GameScreen.init();
       });
       showScreen('loading-screen');
     };
