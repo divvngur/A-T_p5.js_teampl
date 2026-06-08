@@ -24,3 +24,28 @@ python3 -m http.server 5173
 ## 참고
 
 Firebase 연동은 현재 제외되어 있으며, 로그인과 순위표는 `localStorage` 기반으로 동작합니다.
+
+## Cloud Run 배포 준비
+
+이 프로젝트는 `Dockerfile`을 사용해 Cloud Run에 배포할 수 있습니다. 서버는 `server.js`에서 `process.env.PORT || 3000` 포트를 사용하며, 멀티플레이어는 `/multiplayer` 경로로 접근합니다.
+
+배포 예시:
+
+```bash
+gcloud builds submit --config cloudbuild.yaml .
+```
+
+또는 직접 빌드/배포:
+
+```bash
+gcloud builds submit --tag gcr.io/$PROJECT_ID/pigeon-game .
+
+gcloud run deploy pigeon-game \
+  --image gcr.io/$PROJECT_ID/pigeon-game \
+  --platform managed \
+  --region asia-northeast3 \
+  --allow-unauthenticated \
+  --port 3000
+```
+
+배포 후 기본 앱은 `/`에서, 멀티플레이는 `/multiplayer`에서 열립니다.

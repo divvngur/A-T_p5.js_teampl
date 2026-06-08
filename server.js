@@ -6,10 +6,7 @@ const http = require('http').createServer(app);
 // Socket.IO with CORS for cloud deployment
 const io = require('socket.io')(http, {
   cors: {
-    origin: [
-      'https://pigeon-attack-game.web.app',
-      'http://localhost:3000'  // for local dev
-    ],
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -22,9 +19,9 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// /multiplayer → p5 multiplayer game client (public/index.html)
+// /multiplayer → p5 multiplayer game client (public/multiplayer.html)
 app.get('/multiplayer', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'multiplayer.html'));
 });
 
 // /single → original SPA (same as root for now)
