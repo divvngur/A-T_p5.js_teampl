@@ -31,7 +31,7 @@ window.MainScreen = {
   init() {
     const screen = document.getElementById('main-screen');
 
-    screen.innerHTML = `
+    const singleViewHTML = `
       <div class="ui-screen bg-main">
         <div class="bg-clouds">
           <div class="bg-cloud" style="top:12%; left:8%;">☁️</div>
@@ -86,55 +86,137 @@ window.MainScreen = {
       </div>
     `;
 
+    const selectionHTML = `
+      <div class="ui-screen bg-main">
+        <div class="bg-clouds">
+          <div class="bg-cloud" style="top:12%; left:8%;">☁️</div>
+          <div class="bg-cloud" style="bottom:14%; right:8%; animation-delay:1.4s;">☁️</div>
+        </div>
+
+        <header class="top-header">
+          <div class="brand-mark">
+            <div class="brand-icon">🕊️</div>
+            <div class="brand-title">
+              <div style="font-size:22px;">PIGEON ATTACK!</div>
+              <div style="font-size:12px; opacity:.9;">입벌려! 비둘기 똥 들어간다~</div>
+            </div>
+          </div>
+          <div id="main-user-area"></div>
+        </header>
+
+        <button id="main-back" class="btn btn-muted bottom-back">← 처음으로</button>
+
+        <main class="screen-center">
+          <h1 class="section-title gradient-text">플레이 타입 선택</h1>
+          <p class="support-copy">싱글플레이 또는 멀티플레이를 선택하세요</p>
+
+          <div style="display:flex; gap:18px; margin-top:28px;">
+            <button id="select-single" class="mode-card" style="flex:1; padding:28px; font-size:18px;">
+              <div style="font-size:44px;">👤</div>
+              <div style="margin-top:8px; font-weight:700;">싱글플레이</div>
+            </button>
+            <button id="select-multi" class="mode-card" style="flex:1; padding:28px; font-size:18px;">
+              <div style="font-size:44px;">👥</div>
+              <div style="margin-top:8px; font-weight:700;">멀티플레이</div>
+            </button>
+          </div>
+        </main>
+      </div>
+    `;
+
+    // render selection
+    screen.innerHTML = selectionHTML;
     updateMainLoginBtn();
 
-    const startMode = (mode) => {
-      APP.mode = mode;
-      if (mode === 'stage') {
-        StageSelectScreen.init();
-        showScreen('stage-select-screen');
-      } else {
-        LoadingScreen.init(() => {
-          showScreen('game-screen');
-          GameScreen.init();
-        });
-        showScreen('loading-screen');
-      }
-    };
-
-    const warnIfNeeded = (mode) => {
-      if (APP.currentUser) {
-        startMode(mode);
-        return;
-      }
-
-      const warning = document.getElementById('login-warning');
-      warning.style.display = 'flex';
-      warning.className = 'modal-shade';
-      warning.innerHTML = `
-        <div class="modal-card">
-          <div style="font-size:52px; margin-bottom:8px;">⚠️</div>
-          <h2>알림</h2>
-          <p>로그인하지 않으면 경쟁 기록이 계정에 연결되지 않습니다.<br/>현재 버전에서는 브라우저 로컬 기록으로만 저장됩니다.</p>
-          <div class="modal-actions">
-            <button id="warn-cancel" class="btn btn-muted">메인으로</button>
-            <button id="warn-continue" class="btn btn-primary">계속 진행</button>
-          </div>
-        </div>
-      `;
-      document.getElementById('warn-cancel').onclick = () => warning.style.display = 'none';
-      document.getElementById('warn-continue').onclick = () => startMode(mode);
-    };
-
-    document.getElementById('main-stage').onclick = () => startMode('stage');
-    document.getElementById('main-comp').onclick = () => warnIfNeeded('competitive');
-    document.getElementById('main-rank').onclick = () => {
-      LeaderboardScreen.init();
-      showScreen('leaderboard-screen');
-    };
     document.getElementById('main-back').onclick = () => {
       IntroScreen.init();
       showScreen('intro-screen');
+    };
+
+    const showSingleView = () => {
+      screen.innerHTML = singleViewHTML;
+      updateMainLoginBtn();
+
+      const startMode = (mode) => {
+        APP.mode = mode;
+        if (mode === 'stage') {
+          StageSelectScreen.init();
+          showScreen('stage-select-screen');
+        } else {
+          LoadingScreen.init(() => {
+            showScreen('game-screen');
+            GameScreen.init();
+          });
+          showScreen('loading-screen');
+        }
+      };
+
+      const warnIfNeeded = (mode) => {
+        if (APP.currentUser) {
+          startMode(mode);
+          return;
+        }
+
+        const warning = document.getElementById('login-warning');
+        warning.style.display = 'flex';
+        warning.className = 'modal-shade';
+        warning.innerHTML = `
+          <div class="modal-card">
+            <div style="font-size:52px; margin-bottom:8px;">⚠️</div>
+            <h2>알림</h2>
+            <p>로그인하지 않으면 경쟁 기록이 계정에 연결되지 않습니다.<br/>현재 버전에서는 브라우저 로컬 기록으로만 저장됩니다.</p>
+            <div class="modal-actions">
+              <button id="warn-cancel" class="btn btn-muted">메인으로</button>
+              <button id="warn-continue" class="btn btn-primary">계속 진행</button>
+            </div>
+          </div>
+        `;
+        document.getElementById('warn-cancel').onclick = () => warning.style.display = 'none';
+        document.getElementById('warn-continue').onclick = () => startMode(mode);
+      };
+
+      document.getElementById('main-stage').onclick = () => startMode('stage');
+      document.getElementById('main-comp').onclick = () => warnIfNeeded('competitive');
+      document.getElementById('main-rank').onclick = () => {
+        LeaderboardScreen.init();
+        showScreen('leaderboard-screen');
+      };
+      document.getElementById('main-back').onclick = () => {
+        IntroScreen.init();
+        showScreen('intro-screen');
+      };
+    };
+
+    document.getElementById('select-single').onclick = () => showSingleView();
+    document.getElementById('select-multi').onclick = () => {
+      if (!APP.currentUser) {
+        // require login for multiplayer
+        const warning = document.createElement('div');
+        warning.className = 'modal-shade';
+        warning.innerHTML = `
+          <div class="modal-card">
+            <div style="font-size:52px; margin-bottom:8px;">🔒</div>
+            <h2>로그인 필요</h2>
+            <p>멀티플레이는 로그인한 사용자만 플레이할 수 있습니다.</p>
+            <div class="modal-actions">
+              <button id="mp-warn-cancel" class="btn btn-muted">취소</button>
+              <button id="mp-warn-login" class="btn btn-primary">로그인</button>
+            </div>
+          </div>
+        `;
+        warning.id = 'mp-login-warning';
+        document.body.appendChild(warning);
+        document.getElementById('mp-warn-cancel').onclick = () => document.body.removeChild(warning);
+        document.getElementById('mp-warn-login').onclick = () => {
+          document.body.removeChild(warning);
+          LoginScreen.init();
+          showScreen('login-screen');
+        };
+        return;
+      }
+
+      MultiplayerScreen.init();
+      showScreen('multiplayer-screen');
     };
   }
 };

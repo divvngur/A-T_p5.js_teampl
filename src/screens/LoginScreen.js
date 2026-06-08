@@ -35,22 +35,33 @@ window.LoginScreen = {
       </div>
     `;
 
-    const submit = () => {
+    const submit = async () => {
       const nickname = document.getElementById('nickname-input').value.trim();
       const error = document.getElementById('login-error');
+      const btn = document.getElementById('local-login-btn');
 
+      error.style.display = 'none';
       if (!nickname) {
         error.textContent = '닉네임을 입력해주세요.';
         error.style.display = 'block';
         return;
       }
 
-      MockAuth.signIn(nickname);
-      MainScreen.init();
-      showScreen('main-screen');
+      try {
+        btn.disabled = true;
+        await MockAuth.signIn(nickname);
+        MainScreen.init();
+        showScreen('main-screen');
+      } catch (err) {
+        console.error('로그인 실패', err);
+        error.textContent = (err && err.message) ? err.message : '로그인에 실패했습니다.';
+        error.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
     };
 
-    document.getElementById('local-login-btn').onclick = submit;
+    document.getElementById('local-login-btn').onclick = () => submit();
     document.getElementById('nickname-input').onkeydown = (event) => {
       if (event.key === 'Enter') submit();
     };

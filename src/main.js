@@ -1,5 +1,19 @@
 // ── main.js — 화면 라우터 & 전역 상태 ──────────────
 
+// Socket.IO initialization (for multiplayer)
+window.SPA_SOCKET = null;
+function initSPASocket() {
+  if (window.SPA_SOCKET) return;
+  try {
+    const serverUrl = (typeof window !== 'undefined' && window.SOCKET_SERVER) ? window.SOCKET_SERVER : undefined;
+    window.SPA_SOCKET = serverUrl ? io(serverUrl) : io();
+    console.log('[SPA] Socket.IO initialized:', window.SPA_SOCKET.id);
+  } catch (e) {
+    console.error('[SPA] Socket.IO init failed:', e.message);
+    window.SPA_SOCKET = null;
+  }
+}
+
 window.APP = {
   currentUser: null,
   displayName: null,
@@ -285,6 +299,9 @@ window.formatTime = function(ms) {
 
 // ── 진입점 ────────────────────────────────────────────
 function init() {
+  // Initialize Socket.IO for multiplayer
+  initSPASocket();
+  
   MockAuth.load();
 
   // 게임 화면에 boss HP bar & hit flash 추가
