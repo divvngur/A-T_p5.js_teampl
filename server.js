@@ -35,8 +35,21 @@ app.use('/src', express.static(path.join(__dirname, 'src')));
 app.use('/styles', express.static(path.join(__dirname, 'src', 'styles')));
 
 // Serve static files from public (sketch.js, etc.)
-app.use(express.static('public', { 
-  index: false // Don't auto-serve index.html
+app.use('/src', express.static(path.join(__dirname, 'src'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
+
+app.use(express.static('public', {
+  index: false,
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store');
+  }
 }));
 
 // --- Room management ---

@@ -900,6 +900,7 @@ function drawCalibrateScreen() {
   scale(-1, 1);
   image(video, 0, 0, width, height);
   pop();
+  noTint();
 
   fill(8, 10, 18, 110);
   rect(0, 0, width, height);

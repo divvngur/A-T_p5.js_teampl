@@ -211,7 +211,7 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       update() {
-        this.x += this.speed * this.direction;
+        this.x += this.speed * this.direction * (sk.deltaTime / 16.67);
         if (this.x > sk.width + 60)  this.x = -60;
         if (this.x < -60) this.x = sk.width + 60;
         if (sk.random() < this.dropRate) {
@@ -235,7 +235,7 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       update() {
-        this.y += this.speed;
+        this.y += this.speed * (sk.deltaTime / 16.67);
         if (this.y > sk.height + 60) this.isDead = true;
       }
 
@@ -246,25 +246,26 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
     }
 
-// 1. [최종 보정] 픽셀 오버헤드를 완벽히 줄이고 캔버스 스타일을 완전히 고정하는 최적화
+// 1. [완벽 최적화] 픽셀 해상도 꼬임과 블러 현상을 완전히 분리하여 고정합니다.
     function setCanvasDensity() {
-      // 픽셀 연산량을 기기 스펙과 무관하게 1배율(기본)로 압착하여 연산 오버헤드를 제로(0)로 만듭니다.
       sk.pixelDensity(1);
-      
+
       if (gameCanvas) {
-        // GPU가 가속할 수 있도록 하드웨어 연산 안전장치를 스타일로 한 번 더 주입합니다.
+        // CSS 스케일링 제거 — 캔버스를 컨테이너에 맞게 직접 리사이즈하므로 불필요
         gameCanvas.style('width', '100%');
         gameCanvas.style('height', '100%');
         gameCanvas.style('z-index', '5');
         gameCanvas.style('position', 'absolute');
         gameCanvas.style('mix-blend-mode', 'normal');
         gameCanvas.style('opacity', '1');
+        // image-rendering 제거 — noSmooth()와 충돌하여 node 환경에서 흐림 유발
+        gameCanvas.style('image-rendering', 'auto');  // ← crisp-edges 대신 auto
       }
     }
 
-    // 2. [setup] 초기 구동 시 불필요한 연산 꼬임 제거
+    // 2. [setup] 구조 정돈 및 초기 알파 렌더링 세팅 고정
     sk.setup = () => {
-      // 처음부터 브라우저의 가시 영역 크기(clientWidth/Height)로 선언하여 계산 오차를 줄입니다.
+      // 윈도우 크기가 아닌 실제 DOM 부모 컨테이너 크기 기준으로 정확하게 생성
       const parent = document.getElementById(containerId);
       const w = parent ? parent.clientWidth : window.innerWidth;
       const h = parent ? parent.clientHeight : window.innerHeight;
@@ -273,12 +274,13 @@ window.HDFaceGame = function HDFaceGame(options) {
       canvas.parent(containerId);
       
       gameCanvas = canvas;
-      setCanvasDensity(); // 위의 최적화 세팅 강제 주입
-      sk.noSmooth();
+      setCanvasDensity(); // 최적화 및 겹침 방지 스타일 적용
+      //sk.noSmooth();      // 오브젝트 외곽선을 칼같이 선명하게 처리
 
+      // p5.js의 드로잉 불투명도(알파값) 자체를 100% 꽉 찬 상태로 강제 고정
       sk.colorMode(sk.RGB, 255, 255, 255, 255);
 
-      // 기준 좌표 바인딩
+      // 기준 가이드 좌표 바인딩
       guideX = sk.width / 2;
       guideY = sk.height * 0.75;
       diveTargetY = sk.height * 0.6;
@@ -785,9 +787,14 @@ window.HDFaceGame = function HDFaceGame(options) {
 
     function drawCalibrateScreen() {
       sk.background(35);
-      if (videoHD && videoHD.elt.readyState>=2) {
-        sk.push(); sk.tint(255,60); sk.translate(sk.width,0); sk.scale(-1,1);
-        sk.image(videoHD,0,0,sk.width,sk.height); sk.pop(); sk.noTint();
+      if (videoHD && videoHD.elt.readyState >= 2) {
+        sk.push();
+        sk.tint(255, 60);
+        sk.translate(sk.width, 0);
+        sk.scale(-1, 1);
+        sk.image(videoHD, 0, 0, sk.width, sk.height);
+        sk.pop();
+        sk.noTint(); // ← 추가: pop()은 tint를 복원하지 않으므로 명시적으로 해제
       }
       if (predictions.length>0) {
         const face = predictions[0];
@@ -804,10 +811,10 @@ window.HDFaceGame = function HDFaceGame(options) {
 
       calibrationTimer = aligned ? calibrationTimer+sk.deltaTime : 0;
 
-      if (calibrationTimer>=3000) {
+      if (calibrationTimer >= 3000) {
+        sk.noTint(); // ← 전환 직전 강제 초기화 추가
         baseFaceScreenWidth = player.faceScreenWidth;
-        warningAlpha  = 0;
-        gameState     = 'PLAYING';
+        gameState = 'PLAYING';
         sfxNimble.currentTime = 0; sfxNimble.play();
         score         = 0;
         lives         = 3;
@@ -868,17 +875,17 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
     }
 
-// 3. [리사이즈 핸들러] 화면 크기 변경 시 p5.js가 무한 루프 랙을 유발하던 현상 방어
+// 3. [리사이즈] 전체화면/창 크기 변경 시 속도가 저하되는 병목을 제거한 리사이즈 로직
     sk.windowResized = () => {
       const parent = document.getElementById(containerId);
       const w = parent ? parent.clientWidth : window.innerWidth;
       const h = parent ? parent.clientHeight : window.innerHeight;
       
-      // canvas 크기를 강제로 먼저 맞춘 뒤 밀도를 제어합니다.
+      // 크기 조절 시 중복 연산 오버헤드가 없도록 순서 정돈
       sk.resizeCanvas(w, h);
       setCanvasDensity(); 
       
-      // 동적 좌표 재연산
+      // 중심 좌표값 및 보스 비둘기 날개 좌표 동적 재계산
       guideX = sk.width / 2;
       guideY = sk.height * 0.75;
       diveTargetY = sk.height * 0.6;

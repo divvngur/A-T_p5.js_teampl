@@ -1,9 +1,10 @@
 window.GameScreen = {
   init() {
     if (window.bgm) {
-  window.bgm.pause();
-  window.bgm.currentTime = 0;
-}
+      window.bgm.pause();
+      window.bgm.currentTime = 0;
+    }
+
     const hud = document.getElementById('game-hud');
     hud.style.display = 'flex';
 
@@ -37,33 +38,41 @@ window.GameScreen = {
     };
 
     if (window.bgm) {
-  window.bgm.pause();
-  window.bgm.currentTime = 0;
-  window.bgm = null;
-}
+      window.bgm.pause();
+      window.bgm.currentTime = 0;
+      window.bgm = null;
+    }
 
-    APP.p5Instance = HDFaceGame({
-      containerId: 'game-screen',
-      mode: APP.mode,
-      selectedStage: APP.selectedStage,
-      onHudUpdate({ score, lives, elapsed }) {
-        document.getElementById('hud-hearts').textContent =
-          lives > 0 ? '❤️'.repeat(lives) : '🖤';
-        document.getElementById('hud-center').textContent =
-          `🥚 ${score}점 | ${formatTime(elapsed)}`;
-      },
-      onQuit(score, lives, survivalTime) {
-        finishGame({
-          cleared: false,
-          score,
-          lives,
-          survivalTime,
-          quit: true,
+    // ★ 핵심 수정: display:none → flex 전환 후 브라우저 레이아웃 계산이
+    //   완료되기 전에 clientWidth/clientHeight를 읽으면 캔버스가 작은 크기로
+    //   생성되고 CSS 100%로 확대되면서 흐려짐.
+    //   rAF 두 겹으로 감싸 레이아웃 확정 후 캔버스 생성.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        APP.p5Instance = HDFaceGame({
+          containerId: 'game-screen',
+          mode: APP.mode,
+          selectedStage: APP.selectedStage,
+          onHudUpdate({ score, lives, elapsed }) {
+            document.getElementById('hud-hearts').textContent =
+              lives > 0 ? '❤️'.repeat(lives) : '🖤';
+            document.getElementById('hud-center').textContent =
+              `🥚 ${score}점 | ${formatTime(elapsed)}`;
+          },
+          onQuit(score, lives, survivalTime) {
+            finishGame({
+              cleared: false,
+              score,
+              lives,
+              survivalTime,
+              quit: true,
+            });
+          },
+          onFinish(result) {
+            finishGame(result);
+          },
         });
-      },
-      onFinish(result) {
-        finishGame(result);
-      },
+      });
     });
   }
 };
