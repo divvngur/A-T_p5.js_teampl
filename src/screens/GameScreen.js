@@ -7,6 +7,7 @@ window.GameScreen = {
     if (pauseOverlay) pauseOverlay.style.display = 'none';
 
     const finishGame = ({ cleared, score, lives, survivalTime, stage, quit = false }) => {
+      /*
       if (APP.mode === 'competitive' && !quit) {
         MockLeaderboard.add({
           uid: APP.currentUser ? APP.currentUser.uid : 'guest',
@@ -15,6 +16,7 @@ window.GameScreen = {
           survivalTime,
         });
       }
+      */
 
       APP.lastResult = {
         cleared,

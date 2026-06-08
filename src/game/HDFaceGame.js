@@ -368,6 +368,9 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       player.show('PLAYING');
+      sk.fill(255,0,0);
+      sk.noStroke();
+      sk.circle(player.mouthX, player.mouthY, 20);
 
       pigeons.forEach(pigeon => {
         pigeon.update();
