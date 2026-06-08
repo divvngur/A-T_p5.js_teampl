@@ -101,6 +101,7 @@ window.ResultScreen = {
     }
 
     document.getElementById('result-main').onclick = () => {
+      startBGM();
       MainScreen.init();
       showScreen('main-screen');
     };
