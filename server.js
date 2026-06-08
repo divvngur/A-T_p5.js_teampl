@@ -84,6 +84,8 @@ function broadcastRoomList() {
 }
 
 function broadcastRoomState(room) {
+  console.log(`[ROOM STATE] Room ${room.id}: ${room.players.length} players, roles: PIGEON=${room.roles.PIGEON ? '✓' : '✗'} TARGET=${room.roles.TARGET ? '✓' : '✗'}`);
+  
   io.to(`room-${room.id}`).emit('roomState', {
     id: room.id,
     players: room.players.length,
@@ -122,14 +124,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', (id, cb) => {
+    console.log(`\n[JOIN] ${socket.id} attempting to join room: ${id}`);
+    
     const room = ROOMS.get(Number(id));
-    if (!room) return cb && cb({ ok: false, err: 'not_found' });
-    if (room.players.length >= 2) return cb && cb({ ok: false, err: 'full' });
+    if (!room) {
+      console.log(`  ❌ Room not found: ${id}`);
+      return cb && cb({ ok: false, err: 'not_found' });
+    }
+    if (room.players.length >= 2) {
+      console.log(`  ❌ Room full: ${room.players.length}/2`);
+      return cb && cb({ ok: false, err: 'full' });
+    }
 
     room.players.push(socket.id);
     socket.currentRoom = room.id;
     socket.join(`room-${room.id}`);
-    console.log(`socket ${socket.id} joined room ${room.id}`);
+    console.log(`  ✅ Joined! Room ${room.id}: ${room.players.length} players`);
 
     broadcastRoomList();
     broadcastRoomState(room);
@@ -151,25 +161,45 @@ io.on('connection', (socket) => {
   });
 
   socket.on('selectRole', (role) => {
+    console.log(`\n[ROLE] ${socket.id} selecting role: ${role}`);
+    
     const rid = socket.currentRoom;
-    if (!rid) return socket.emit('roleAssigned', null);
+    if (!rid) {
+      console.log(`  ❌ No currentRoom set!`);
+      return socket.emit('roleAssigned', null);
+    }
+    
     const room = ROOMS.get(rid);
-    if (!room) return socket.emit('roleAssigned', null);
+    if (!room) {
+      console.log(`  ❌ Room ${rid} not found!`);
+      return socket.emit('roleAssigned', null);
+    }
+    
     if (socket.role) {
+      console.log(`  ⚠️ Already has role: ${socket.role}`);
       socket.emit('roleAssigned', socket.role);
       return;
     }
-    if (role !== 'PIGEON' && role !== 'TARGET') return;
+    
+    if (role !== 'PIGEON' && role !== 'TARGET') {
+      console.log(`  ❌ Invalid role: ${role}`);
+      return;
+    }
+    
     if (room.roles[role]) {
+      console.log(`  ❌ ${role} already taken!`);
       broadcastRoomState(room);
       return;
     }
+    
     room.roles[role] = socket.id;
     socket.role = role;
+    console.log(`  ✅ Assigned ${role} to room ${rid}`);
     socket.emit('roleAssigned', role);
     broadcastRoomState(room);
 
     if (room.roles.PIGEON && room.roles.TARGET) {
+      console.log(`  🎮 Both players ready! Starting game...`);
       room.calibrated.PIGEON = false;
       room.calibrated.TARGET = false;
       broadcastRoomState(room);

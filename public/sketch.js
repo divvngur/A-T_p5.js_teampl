@@ -92,24 +92,28 @@ function setup() {
     socket = io();
   }
 
-  // If URL has ?room=ID, attempt to join that room on connect (if not already in room)
-  try {
+  // CRITICAL: Wait for socket connection before emitting joinRoom
+  // This prevents messages from being dropped if sent before connection is established
+  socket.on('connect', () => {
+    console.log('🔌 Socket connected:', socket.id);
+
     const params = new URLSearchParams(window.location.search);
     const rid = params.get('room');
-    if (rid && !myCurrentRoom) { // only join if not already tracking a room
+
+    if (rid) {
+      console.log('📍 Attempting to join room:', rid);
       socket.emit('joinRoom', Number(rid), (res) => {
         if (!res || !res.ok) {
-          console.warn('room join failed', res);
+          console.warn('❌ room join failed', res);
           myCurrentRoom = null;
-        } else {
-          console.log('joined room', res.room);
-          myCurrentRoom = res.room.id;
+          return;
         }
+
+        myCurrentRoom = res.room.id;
+        console.log('✅ joined room:', myCurrentRoom);
       });
     }
-  } catch (e) {
-    // ignore
-  }
+  });
 
   socket.on('roleStatus', (status) => {
     rolesStatus = status;
