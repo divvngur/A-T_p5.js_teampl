@@ -527,3 +527,44 @@ canvas { display:block; position:absolute; top:0; left:0; }
   .btn-large { width:100%; }
   .lb-row { gap:10px; }
 }
+
+/* 기존에 있던 canvas 스타일은 유지하되, 게임 영역 내부의 요소들을 격리합니다 */
+#game-screen {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000; /* 캠 로딩 전 블랙 스크린 */
+  overflow: hidden;
+}
+
+/* p5.js 캔버스가 들어가는 부모 컨테이너 */
+#game-screen #game-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+/* 실제 p5.js 게임 도화지 스타일 고정 */
+#game-screen canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5 !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  image-rendering: -webkit-optimize-contrast; /* 이모지 및 그래픽 선명도 강화 */
+  image-rendering: crisp-edges;
+}
+
+/* 캡처되는 비디오 엘리먼트가 혹시 화면에 튀어나와 캔버스를 가리거나 흐리게 조절하지 못하도록 확실하게 격리 */
+#game-screen video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1; /* 게임 그래픽(z-index: 5)보다 한참 아래에 배치 */
+}
