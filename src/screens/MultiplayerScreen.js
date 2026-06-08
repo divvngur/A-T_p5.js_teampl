@@ -102,14 +102,10 @@ window.MultiplayerScreen = {
           }
           showModal(`방에 입장합니다.<br/><b>${room.name}</b>`, [
             { label:'입장', cls:'btn-primary', cb:() => {
-              socket.emit('joinRoom', id, (res) => {
-                if (!res || !res.ok) {
-                  showModal('방 입장에 실패했습니다: ' + (res && res.err ? res.err : 'unknown'), [{ label:'확인', cls:'btn-muted' }]);
-                  return;
-                }
-                // Navigate to p5 multiplayer client (SPA socket stays connected for others)
-                window.location.href = '/multiplayer?room=' + id;
-              });
+              // IMPORTANT: Do NOT emit joinRoom from SPA socket
+              // The Game socket (in p5/sketch.js) will join automatically on page load
+              // If we emit here, SPA socket disconnect will delete the room before Game socket arrives
+              window.location.href = '/multiplayer?room=' + id;
             } },
             { label:'취소', cls:'btn-muted' }
           ]);
