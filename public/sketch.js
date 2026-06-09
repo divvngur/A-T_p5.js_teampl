@@ -38,17 +38,17 @@ let uiHit = {};
 let menuOrbs = [];
 
 const THEME = {
-  bgA: [18, 24, 44],
-  bgB: [39, 78, 134],
-  bgC: [90, 62, 161],
-  card: [14, 20, 34],
-  text: [236, 243, 255],
-  sub: [173, 194, 226],
-  accent: [104, 232, 215],
-  accent2: [129, 120, 255],
-  success: [111, 235, 140],
-  danger: [255, 120, 133],
-  warning: [255, 212, 108]
+  bgA: [56, 189, 248],    // #38bdf8 sky
+  bgB: [147, 197, 253],   // #93c5fd light blue
+  bgC: [252, 211, 77],    // #fcd34d yellow
+  card: [255, 255, 255],  // white glass card
+  text: [31, 41, 55],     // #1f2937 dark
+  sub: [100, 116, 139],   // #64748b slate
+  accent: [249, 115, 22], // #f97316 orange
+  accent2: [139, 92, 246],// #8b5cf6 purple
+  success: [34, 197, 94], // #22c55e green
+  danger: [239, 68, 68],  // #ef4444 red
+  warning: [251, 191, 36] // #fbbf24 yellow
 };
 
 let globalState = {
@@ -279,14 +279,32 @@ function drawButton(cx, cy, w, h, label, enabled = true, hue = 'accent') {
   rectMode(CENTER);
   noStroke();
 
-  let col = hue === 'danger' ? THEME.danger : hue === 'success' ? THEME.success : THEME.accent2;
-  fill(col[0], col[1], col[2], enabled ? 230 : 90);
-  rect(0, 0, w, h, 18);
+  drawingContext.save();
+  if (enabled) {
+    let grad = drawingContext.createLinearGradient(-w / 2, 0, w / 2, 0);
+    if (hue === 'danger') {
+      grad.addColorStop(0, '#ef4444'); grad.addColorStop(1, '#ec4899');
+    } else if (hue === 'success') {
+      grad.addColorStop(0, '#22c55e'); grad.addColorStop(1, '#10b981');
+    } else {
+      grad.addColorStop(0, '#f97316'); grad.addColorStop(0.5, '#ef4444'); grad.addColorStop(1, '#ec4899');
+    }
+    drawingContext.shadowColor = 'rgba(15,23,42,0.22)';
+    drawingContext.shadowBlur = 18;
+    drawingContext.shadowOffsetY = 6;
+    drawingContext.fillStyle = grad;
+  } else {
+    drawingContext.fillStyle = 'rgba(180,180,200,0.45)';
+  }
+  drawingContext.beginPath();
+  drawingContext.roundRect(-w / 2, -h / 2, w, h, 18);
+  drawingContext.fill();
+  drawingContext.restore();
 
-  fill(255, 255, 255, enabled ? 34 : 15);
+  fill(255, 255, 255, enabled ? 40 : 10);
   rect(0, -h * 0.18, w * 0.96, h * 0.36, 14);
 
-  fill(255, enabled ? 255 : 150);
+  fill(255, enabled ? 255 : 160);
   textAlign(CENTER, CENTER);
   textSize(28);
   textStyle(BOLD);
@@ -299,12 +317,17 @@ function drawButton(cx, cy, w, h, label, enabled = true, hue = 'accent') {
 
 function drawScreenTitle(main, sub) {
   textAlign(CENTER, CENTER);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  drawingContext.save();
+  drawingContext.shadowColor = 'rgba(15,23,42,0.28)';
+  drawingContext.shadowBlur = 18;
+  fill(255);
   textStyle(BOLD);
   textSize(76);
   text(main, width / 2, 120);
+  drawingContext.shadowBlur = 0;
+  drawingContext.restore();
   textStyle(NORMAL);
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
+  fill(255, 255, 255, 220);
   textSize(30);
   text(sub, width / 2, 180);
 }
@@ -350,7 +373,7 @@ function draw() {
 }
 
 function playGame() {
-  background(100, 180, 240);
+  background('#7dd3fc');
   noTint();
 
   if (poopCooldown > 0) poopCooldown--;
@@ -658,9 +681,9 @@ function drawProgressBar(x, y, w, h, value, maxValue, col, label) {
   push();
   rectMode(CORNER);
   noStroke();
-  fill(255, 255, 255, 40);
+  fill(226, 232, 240, 220);
   rect(x, y, w, h, 999);
-  fill(col[0], col[1], col[2], 220);
+  fill(col[0], col[1], col[2], 230);
   rect(x, y, w * r, h, 999);
   fill(240);
   textAlign(CENTER, CENTER);
@@ -701,7 +724,7 @@ function drawLoadingScreen() {
 
   let pct = constrain(modelsLoaded / 2, 0, 1);
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(226, 232, 240, 220);
   rect(width / 2 - 220, height / 2 + 55, 440, 26, 999);
   fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], 240);
   rect(width / 2 - 220, height / 2 + 55, 440 * pct, 26, 999);
@@ -832,7 +855,7 @@ function drawMainScreen() {
 function drawGameOverScreen() {
   let win = (gameResult === 'TARGET_WIN' && myRole === 'TARGET') || (gameResult === 'PIGEON_WIN' && myRole === 'PIGEON');
 
-  drawGradientBg(win ? [18, 40, 34] : [44, 18, 26], win ? [34, 90, 66] : [110, 45, 65]);
+  drawGradientBg(win ? [34, 197, 94] : [239, 68, 68], win ? [16, 185, 129] : [236, 72, 153]);
   drawMenuOrbs();
 
   drawGlassCard(width / 2, height / 2, 980, 540, 155, 95, 32);
@@ -872,15 +895,15 @@ function drawWaitingSyncScreen() {
   let pReady = syncStatus.PIGEON;
   let tReady = syncStatus.TARGET;
 
-  fill(pReady ? THEME.success[0] : 255, pReady ? THEME.success[1] : 255, pReady ? THEME.success[2] : 255);
+  fill(pReady ? THEME.success[0] : THEME.sub[0], pReady ? THEME.success[1] : THEME.sub[1], pReady ? THEME.success[2] : THEME.sub[2]);
   textSize(34);
   text(`비둘기: ${pReady ? '완료' : '대기중'}`, width / 2, height / 2 + 20);
 
-  fill(tReady ? THEME.success[0] : 255, tReady ? THEME.success[1] : 255, tReady ? THEME.success[2] : 255);
+  fill(tReady ? THEME.success[0] : THEME.sub[0], tReady ? THEME.success[1] : THEME.sub[1], tReady ? THEME.success[2] : THEME.sub[2]);
   text(`사람: ${tReady ? '완료' : '대기중'}`, width / 2, height / 2 + 72);
 
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(226, 232, 240, 220);
   rect(width / 2 - 220, height / 2 + 122, 440, 22, 999);
   let syncCount = (pReady ? 1 : 0) + (tReady ? 1 : 0);
   fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], 230);
@@ -900,7 +923,6 @@ function drawCalibrateScreen() {
   scale(-1, 1);
   image(video, 0, 0, width, height);
   pop();
-  noTint();
 
   fill(8, 10, 18, 110);
   rect(0, 0, width, height);

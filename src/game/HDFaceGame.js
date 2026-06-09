@@ -14,7 +14,6 @@ window.HDFaceGame = function HDFaceGame(options) {
   const AI_H = 360;
 
   let p5Instance = null;
-  let gameCanvas = null;
 
   const sfxEat   = new Audio('src/assets/powerup01.mp3');
   const sfxHit   = new Audio('src/assets/powerdown02.mp3');
@@ -192,7 +191,6 @@ window.HDFaceGame = function HDFaceGame(options) {
         sk.drawingContext.beginPath();
         sk.drawingContext.arc(sk.width - this.x, this.y, drawSize * 0.52, 0, sk.TWO_PI);
         sk.drawingContext.clip();
-        sk.drawingContext.imageSmoothingEnabled = false;
         sk.drawingContext.drawImage(segMaskCanvas, sx, sy, sw, sh,
           sk.width - this.x - drawSize / 2, this.y - drawSize / 2, drawSize, drawSize);
         sk.drawingContext.restore();
@@ -211,7 +209,7 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       update() {
-        this.x += this.speed * this.direction * (sk.deltaTime / 16.67);
+        this.x += this.speed * this.direction;
         if (this.x > sk.width + 60)  this.x = -60;
         if (this.x < -60) this.x = sk.width + 60;
         if (sk.random() < this.dropRate) {
@@ -220,6 +218,7 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       show() {
+        sk.fill(255);
         sk.textSize(sk.min(sk.width, sk.height) * 0.085);
         sk.textAlign(sk.CENTER, sk.CENTER);
         sk.text('🕊️', this.x, this.y);
@@ -235,61 +234,34 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
 
       update() {
-        this.y += this.speed * (sk.deltaTime / 16.67);
+        this.y += this.speed;
         if (this.y > sk.height + 60) this.isDead = true;
       }
 
       show() {
+        sk.fill(255);
         sk.textSize(sk.min(sk.width, sk.height) * 0.065);
         sk.textAlign(sk.CENTER, sk.CENTER);
         sk.text(this.type === 'EGG' ? '🥚' : '💩', this.x, this.y);
       }
     }
 
-// 1. [완벽 최적화] 픽셀 해상도 꼬임과 블러 현상을 완전히 분리하여 고정합니다.
-    function setCanvasDensity() {
-      sk.pixelDensity(1);
-
-      if (gameCanvas) {
-        // CSS 스케일링 제거 — 캔버스를 컨테이너에 맞게 직접 리사이즈하므로 불필요
-        gameCanvas.style('width', '100%');
-        gameCanvas.style('height', '100%');
-        gameCanvas.style('z-index', '5');
-        gameCanvas.style('position', 'absolute');
-        gameCanvas.style('mix-blend-mode', 'normal');
-        gameCanvas.style('opacity', '1');
-        // image-rendering 제거 — noSmooth()와 충돌하여 node 환경에서 흐림 유발
-        gameCanvas.style('image-rendering', 'auto');  // ← crisp-edges 대신 auto
-      }
-    }
-
-    // 2. [setup] 구조 정돈 및 초기 알파 렌더링 세팅 고정
     sk.setup = () => {
-      // 윈도우 크기가 아닌 실제 DOM 부모 컨테이너 크기 기준으로 정확하게 생성
-      const parent = document.getElementById(containerId);
-      const w = parent ? parent.clientWidth : window.innerWidth;
-      const h = parent ? parent.clientHeight : window.innerHeight;
-      
-      const canvas = sk.createCanvas(w, h);
+      const canvas = sk.createCanvas(window.innerWidth, window.innerHeight);
       canvas.parent(containerId);
-      
-      gameCanvas = canvas;
-      setCanvasDensity(); // 최적화 및 겹침 방지 스타일 적용
-      //sk.noSmooth();      // 오브젝트 외곽선을 칼같이 선명하게 처리
+      canvas.style('z-index', '1');
 
-      // p5.js의 드로잉 불투명도(알파값) 자체를 100% 꽉 찬 상태로 강제 고정
-      sk.colorMode(sk.RGB, 255, 255, 255, 255);
-
-      // 기준 가이드 좌표 바인딩
       guideX = sk.width / 2;
       guideY = sk.height * 0.75;
       diveTargetY = sk.height * 0.6;
 
-      BX = sk.width / 2 - 100;
-      BC = sk.width / 2;
+      // 보스 위치 동적 계산
+      BX = sk.width / 2 - 100; // 보스 몸통 왼쪽 x
+      BC = sk.width / 2;        // 보스 중심 x
       LEFT_WING_TIP  = { x: BX - 145, y: 100 };
       RIGHT_WING_TIP = { x: BX + 345, y: 100 };
 
+      // CROSS_DIRS 초기화
       CROSS_DIRS = [
         [ {wx:'left', angle:sk.radians(30)}, {wx:'left', angle:sk.radians(50)}, {wx:'left', angle:sk.radians(70)} ],
         [ {wx:'right',angle:sk.radians(150)},{wx:'right',angle:sk.radians(130)},{wx:'right',angle:sk.radians(110)} ],
@@ -595,7 +567,7 @@ window.HDFaceGame = function HDFaceGame(options) {
       if (bossState === 'idle') {
         if (stateTimer > IDLE_DURATION) {
           stateTimer = 0;
-          const poolSize = bossType==='miniboss' ? 1 : bossType==='boss' ? 2 : 3;
+          const poolSize = bossType==='boss2' ? 3 : bossType==='boss' ? 2 : 1;
           const p = patternIndex % poolSize;
           if      (p===0) { bossState='beam_charge'; }
           else if (p===1) { bossState='cross_warn'; initCrossWarning(); }
@@ -787,14 +759,9 @@ window.HDFaceGame = function HDFaceGame(options) {
 
     function drawCalibrateScreen() {
       sk.background(35);
-      if (videoHD && videoHD.elt.readyState >= 2) {
-        sk.push();
-        sk.tint(255, 60);
-        sk.translate(sk.width, 0);
-        sk.scale(-1, 1);
-        sk.image(videoHD, 0, 0, sk.width, sk.height);
-        sk.pop();
-        sk.noTint(); // ← 추가: pop()은 tint를 복원하지 않으므로 명시적으로 해제
+      if (videoHD && videoHD.elt.readyState>=2) {
+        sk.push(); sk.tint(255,60); sk.translate(sk.width,0); sk.scale(-1,1);
+        sk.image(videoHD,0,0,sk.width,sk.height); sk.pop(); sk.noTint();
       }
       if (predictions.length>0) {
         const face = predictions[0];
@@ -811,10 +778,10 @@ window.HDFaceGame = function HDFaceGame(options) {
 
       calibrationTimer = aligned ? calibrationTimer+sk.deltaTime : 0;
 
-      if (calibrationTimer >= 3000) {
-        sk.noTint(); // ← 전환 직전 강제 초기화 추가
+      if (calibrationTimer>=3000) {
         baseFaceScreenWidth = player.faceScreenWidth;
-        gameState = 'PLAYING';
+        warningAlpha  = 0;
+        gameState     = 'PLAYING';
         sfxNimble.currentTime = 0; sfxNimble.play();
         score         = 0;
         lives         = 3;
@@ -875,20 +842,11 @@ window.HDFaceGame = function HDFaceGame(options) {
       }
     }
 
-// 3. [리사이즈] 전체화면/창 크기 변경 시 속도가 저하되는 병목을 제거한 리사이즈 로직
     sk.windowResized = () => {
-      const parent = document.getElementById(containerId);
-      const w = parent ? parent.clientWidth : window.innerWidth;
-      const h = parent ? parent.clientHeight : window.innerHeight;
-      
-      // 크기 조절 시 중복 연산 오버헤드가 없도록 순서 정돈
-      sk.resizeCanvas(w, h);
-      setCanvasDensity(); 
-      
-      // 중심 좌표값 및 보스 비둘기 날개 좌표 동적 재계산
-      guideX = sk.width / 2;
-      guideY = sk.height * 0.75;
-      diveTargetY = sk.height * 0.6;
+      sk.resizeCanvas(window.innerWidth, window.innerHeight);
+      guideX = sk.width/2;
+      guideY = sk.height*0.75;
+      diveTargetY = sk.height*0.6;
       BX = sk.width / 2 - 100;
       BC = sk.width / 2;
       LEFT_WING_TIP  = { x: BX - 145, y: 100 };
