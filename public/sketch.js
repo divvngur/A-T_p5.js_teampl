@@ -1,6 +1,6 @@
 let socket;
 let myRole = 'WAITING';
-let myCurrentRoom = null; // Track current room on client
+let myCurrentRoom = null; 
 
 const GAME_W = 1920;
 const GAME_H = 1080;
@@ -35,20 +35,19 @@ let tCtx;
 let faceSendSize = 100;
 
 let uiHit = {};
-let menuOrbs = [];
+let clouds = [];
 
+// 밝고 쨍한 테마
 const THEME = {
-  bgA: [18, 24, 44],
-  bgB: [39, 78, 134],
-  bgC: [90, 62, 161],
-  card: [14, 20, 34],
-  text: [236, 243, 255],
-  sub: [173, 194, 226],
-  accent: [104, 232, 215],
-  accent2: [129, 120, 255],
-  success: [111, 235, 140],
-  danger: [255, 120, 133],
-  warning: [255, 212, 108]
+  sky: [135, 206, 250],        
+  card: [255, 255, 255],       
+  textDark: [40, 40, 40],      
+  textSub: [120, 120, 120],    
+  btnPrimary: [250, 90, 150],  
+  btnHover: [255, 120, 170],   
+  success: [80, 200, 120],     
+  danger: [255, 80, 80],       
+  warning: [255, 180, 50]      
 };
 
 let globalState = {
@@ -75,16 +74,13 @@ function setup() {
   guideY = height * 0.75;
 
   player = new Player();
-  initMenuOrbs();
+  initClouds();
 
   tempCanvas = document.createElement('canvas');
   tempCanvas.width = faceSendSize;
   tempCanvas.height = faceSendSize;
   tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Socket connection: use `window.SOCKET_SERVER` if provided (for separate hosting),
-  // otherwise connect to same origin.
-  // Always create a new socket for p5 multiplayer (don't reuse SPA socket)
   try {
     const serverUrl = (typeof window !== 'undefined' && window.SOCKET_SERVER) ? window.SOCKET_SERVER : undefined;
     socket = serverUrl ? io(serverUrl) : io();
@@ -92,32 +88,23 @@ function setup() {
     socket = io();
   }
 
-  // CRITICAL: Wait for socket connection before emitting joinRoom
-  // This prevents messages from being dropped if sent before connection is established
   socket.on('connect', () => {
     console.log('🔌 Socket connected:', socket.id);
-
     const params = new URLSearchParams(window.location.search);
     const rid = params.get('room');
 
     if (rid) {
-      console.log('📍 Attempting to join room:', rid);
       socket.emit('joinRoom', Number(rid), (res) => {
         if (!res || !res.ok) {
-          console.warn('❌ room join failed', res);
           myCurrentRoom = null;
           return;
         }
-
         myCurrentRoom = res.room.id;
-        console.log('✅ joined room:', myCurrentRoom);
       });
     }
   });
 
-  socket.on('roleStatus', (status) => {
-    rolesStatus = status;
-  });
+  socket.on('roleStatus', (status) => { rolesStatus = status; });
 
   socket.on('calibrationStatus', (status) => {
     syncStatus = status;
@@ -128,7 +115,7 @@ function setup() {
 
   socket.on('goRoleSelection', () => {
     myRole = 'WAITING';
-    myCurrentRoom = null; // reset room tracking
+    myCurrentRoom = null; 
     gameResult = '';
     resetGameState();
     syncStatus = { PIGEON: false, TARGET: false };
@@ -155,7 +142,7 @@ function setup() {
   socket.on('opponentLeft', () => {
     if (gameState === 'GAME_OVER') {
       myRole = 'WAITING';
-      myCurrentRoom = null; // reset
+      myCurrentRoom = null; 
       gameResult = '';
       resetGameState();
       syncStatus = { PIGEON: false, TARGET: false };
@@ -210,58 +197,55 @@ function resetGameState() {
   poopCooldown = 0;
 }
 
-function initMenuOrbs() {
-  menuOrbs = [];
-  for (let i = 0; i < 24; i++) {
-    menuOrbs.push({
+function initClouds() {
+  clouds = [];
+  for (let i = 0; i < 15; i++) {
+    clouds.push({
       x: random(width),
-      y: random(height),
-      r: random(60, 180),
-      vx: random(-0.28, 0.28),
-      vy: random(-0.18, 0.18),
-      c: random() > 0.5 ? 'a' : 'b'
+      y: random(height * 0.4),
+      w: random(100, 250),
+      h: random(40, 80),
+      vx: random(0.5, 1.5)
     });
   }
 }
 
-function drawGradientBg(c1, c2) {
-  for (let y = 0; y < height; y += 4) {
+function drawVibrantBg() {
+  for (let y = 0; y < height; y += 5) {
     let t = y / height;
-    let r = lerp(c1[0], c2[0], t);
-    let g = lerp(c1[1], c2[1], t);
-    let b = lerp(c1[2], c2[2], t);
-    noStroke();
-    fill(r, g, b);
-    rect(0, y, width, 4);
+    let r, g, b;
+    if (t < 0.5) {
+      let st = t * 2;
+      r = lerp(40, 0, st); g = lerp(100, 220, st); b = lerp(255, 200, st);
+    } else {
+      let st = (t - 0.5) * 2;
+      r = lerp(0, 240, st); g = lerp(220, 230, st); b = lerp(200, 20, st);
+    }
+    noStroke(); fill(r, g, b); rect(0, y, width, 5);
   }
 }
 
-function drawMenuOrbs() {
+function drawClouds() {
   noStroke();
-  for (let o of menuOrbs) {
-    o.x += o.vx;
-    o.y += o.vy;
-    if (o.x < -o.r) o.x = width + o.r;
-    if (o.x > width + o.r) o.x = -o.r;
-    if (o.y < -o.r) o.y = height + o.r;
-    if (o.y > height + o.r) o.y = -o.r;
-
-    if (o.c === 'a') fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], 22);
-    else fill(THEME.accent2[0], THEME.accent2[1], THEME.accent2[2], 20);
-    ellipse(o.x, o.y, o.r, o.r);
+  fill(255, 255, 255, 200);
+  for (let c of clouds) {
+    c.x += c.vx;
+    if (c.x > width + c.w) c.x = -c.w;
+    ellipse(c.x, c.y, c.w, c.h);
   }
 }
 
-function drawGlassCard(cx, cy, w, h, alpha = 150, strokeA = 70, radius = 28) {
+function drawLightCard(cx, cy, w, h, alpha = 245, radius = 24) {
   push();
   rectMode(CENTER);
-  drawingContext.shadowColor = 'rgba(0,0,0,0.35)';
-  drawingContext.shadowBlur = 20;
-  fill(THEME.card[0], THEME.card[1], THEME.card[2], alpha);
-  stroke(255, 255, 255, strokeA);
-  strokeWeight(1.5);
+  drawingContext.shadowColor = 'rgba(0,0,0,0.15)';
+  drawingContext.shadowBlur = 15;
+  drawingContext.shadowOffsetY = 6;
+  fill(255, 255, 255, alpha);
+  noStroke();
   rect(cx, cy, w, h, radius);
   drawingContext.shadowBlur = 0;
+  drawingContext.shadowOffsetY = 0;
   pop();
 }
 
@@ -269,7 +253,7 @@ function pointInCenteredRect(px, py, b) {
   return px >= b.cx - b.w / 2 && px <= b.cx + b.w / 2 && py >= b.cy - b.h / 2 && py <= b.cy + b.h / 2;
 }
 
-function drawButton(cx, cy, w, h, label, enabled = true, hue = 'accent') {
+function drawButton(cx, cy, w, h, label, enabled = true, colorType = 'primary') {
   let hover = enabled && pointInCenteredRect(mouseX, mouseY, { cx, cy, w, h });
   let s = hover ? 1.03 : 1.0;
 
@@ -279,18 +263,23 @@ function drawButton(cx, cy, w, h, label, enabled = true, hue = 'accent') {
   rectMode(CENTER);
   noStroke();
 
-  let col = hue === 'danger' ? THEME.danger : hue === 'success' ? THEME.success : THEME.accent2;
-  fill(col[0], col[1], col[2], enabled ? 230 : 90);
-  rect(0, 0, w, h, 18);
-
-  fill(255, 255, 255, enabled ? 34 : 15);
-  rect(0, -h * 0.18, w * 0.96, h * 0.36, 14);
+  let col = colorType === 'danger' ? THEME.danger : colorType === 'success' ? THEME.success : THEME.btnPrimary;
+  
+  drawingContext.shadowColor = 'rgba(0,0,0,0.2)';
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowOffsetY = 4;
+  
+  fill(col[0], col[1], col[2], enabled ? 255 : 100);
+  rect(0, 0, w, h, 30);
+  
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowOffsetY = 0;
 
   fill(255, enabled ? 255 : 150);
   textAlign(CENTER, CENTER);
-  textSize(28);
+  textSize(32);
   textStyle(BOLD);
-  text(label, 0, 1);
+  text(label, 0, 2);
   textStyle(NORMAL);
   pop();
 
@@ -299,14 +288,23 @@ function drawButton(cx, cy, w, h, label, enabled = true, hue = 'accent') {
 
 function drawScreenTitle(main, sub) {
   textAlign(CENTER, CENTER);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  
+  drawingContext.shadowColor = 'rgba(0,0,0,0.3)';
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowOffsetY = 4;
+  
+  fill(255);
   textStyle(BOLD);
-  textSize(76);
-  text(main, width / 2, 120);
+  textSize(84);
+  text(main, width / 2, 130);
+  
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowOffsetY = 0;
   textStyle(NORMAL);
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
-  textSize(30);
-  text(sub, width / 2, 180);
+  
+  fill(255);
+  textSize(32);
+  text(sub, width / 2, 210);
 }
 
 function videoReady() { sendFrameToSegmentation(); }
@@ -350,7 +348,8 @@ function draw() {
 }
 
 function playGame() {
-  background(100, 180, 240);
+  background(THEME.sky[0], THEME.sky[1], THEME.sky[2]);
+  drawClouds();
   noTint();
 
   if (poopCooldown > 0) poopCooldown--;
@@ -538,7 +537,7 @@ class Player {
     if (segReady) this._drawFaceOnly();
 
     if (this.mouthOpen) {
-      fill(0, 255, 255, mode === 'CALIBRATE' ? 120 : 80);
+      fill(250, 90, 150, mode === 'CALIBRATE' ? 120 : 80);
       noStroke();
       let pulse = sin(frameCount * 0.15) * 4;
       let displayMouth = this.mouthRadius * 3;
@@ -546,7 +545,7 @@ class Player {
 
       if (mode === 'CALIBRATE') {
         noFill();
-        stroke(0, 255, 255, 200);
+        stroke(250, 90, 150, 200);
         strokeWeight(2);
         ellipse(this.mouthX, this.mouthY, displayMouth + pulse, displayMouth + pulse);
         noStroke();
@@ -554,12 +553,12 @@ class Player {
     } else {
       if (mode === 'CALIBRATE') {
         noFill();
-        stroke(0, 255, 255, 150);
+        stroke(250, 90, 150, 150);
         strokeWeight(3);
         ellipse(this.mouthX, this.mouthY, 30, 30);
         noStroke();
       } else {
-        fill(0, 255, 255, 100);
+        fill(250, 90, 150, 100);
         noStroke();
         ellipse(this.mouthX, this.mouthY, 15, 15);
       }
@@ -619,15 +618,15 @@ function drawTargetAvatar() {
   }
 
   if (targetData.mouthOpen) {
-    fill(0, 255, 255, 80);
-    stroke(0, 255, 0, 150);
+    fill(250, 90, 150, 80);
+    stroke(80, 200, 120, 150);
     strokeWeight(2);
     let pulse = sin(frameCount * 0.2) * 4;
     let mouthHitDiameter = targetData.mouthRadius * 3;
     ellipse(targetData.mouthX, targetData.mouthY, mouthHitDiameter + pulse, mouthHitDiameter + pulse);
     noStroke();
   } else {
-    fill(0, 255, 255, 100);
+    fill(250, 90, 150, 100);
     noStroke();
     ellipse(targetData.mouthX, targetData.mouthY, 15, 15);
   }
@@ -653,67 +652,57 @@ function drawSplatters() {
   }
 }
 
-function drawProgressBar(x, y, w, h, value, maxValue, col, label) {
-  let r = constrain(value / maxValue, 0, 1);
-  push();
-  rectMode(CORNER);
-  noStroke();
-  fill(255, 255, 255, 40);
-  rect(x, y, w, h, 999);
-  fill(col[0], col[1], col[2], 220);
-  rect(x, y, w * r, h, 999);
-  fill(240);
-  textAlign(CENTER, CENTER);
-  textSize(22);
-  text(`${label} ${value}/${maxValue}`, x + w / 2, y + h / 2 + 1);
-  pop();
-}
-
+// 인게임 UI (역할 안내창을 우측 상단으로 이동시켰습니다)
 function drawUI() {
-  drawGlassCard(250, 96, 430, 138, 125, 80, 24);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
-  textAlign(LEFT, TOP);
-  textSize(30);
+  // 역할 안내 (우측 상단으로 이동 완료!)
+  let roleCardX = width - 160; 
+  drawLightCard(roleCardX, 60, 260, 60, 240, 30);
+  fill(THEME.textDark[0]);
+  textAlign(CENTER, CENTER);
+  textSize(24);
   textStyle(BOLD);
-  text(`역할: ${myRole === 'PIGEON' ? '비둘기 🕊️' : '사람 😲'}`, 70, 52);
+  text(`역할: ${myRole === 'PIGEON' ? '비둘기 🕊️' : '사람 😲'}`, roleCardX, 62);
   textStyle(NORMAL);
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
-  textSize(22);
-  text(`실시간 멀티 매치`, 70, 95);
 
-  drawGlassCard(width - 300, 104, 560, 154, 125, 80, 24);
-  drawProgressBar(width - 535, 70, 470, 34, globalState.poopHits, 5, THEME.danger, '사람이 맞은 똥');
-  drawProgressBar(width - 535, 118, 470, 34, globalState.eggsEaten, 5, THEME.warning, '사람이 먹은 알');
+  // 멀티플레이 점수 현황 (중앙 상단)
+  drawLightCard(width / 2, 60, 500, 60, 240, 30);
+  fill(THEME.textDark[0]);
+  textSize(24);
+  textStyle(BOLD);
+  text(`😲먹은 알: ${globalState.eggsEaten}/5   |   💩맞은 똥: ${globalState.poopHits}/5`, width / 2, 62);
+  textStyle(NORMAL);
 }
 
 function drawLoadingScreen() {
-  drawGradientBg(THEME.bgA, THEME.bgC);
-  drawMenuOrbs();
+  drawVibrantBg();
+  drawClouds();
 
   drawScreenTitle("입벌려! 비둘기 똥 들어간다~", "AI 모델을 불러오는 중");
 
-  drawGlassCard(width / 2, height / 2 + 50, 650, 260, 145, 85, 30);
+  drawLightCard(width / 2, height / 2 + 50, 650, 260, 245, 30);
 
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textAlign(CENTER, CENTER);
   textSize(44);
+  textStyle(BOLD);
   text("모델 로딩 중...", width / 2, height / 2 - 5);
+  textStyle(NORMAL);
 
   let pct = constrain(modelsLoaded / 2, 0, 1);
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(220);
   rect(width / 2 - 220, height / 2 + 55, 440, 26, 999);
-  fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], 240);
+  fill(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2]);
   rect(width / 2 - 220, height / 2 + 55, 440 * pct, 26, 999);
 
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
+  fill(THEME.textSub[0]);
   textSize(26);
   text(`(${modelsLoaded}/2)`, width / 2, height / 2 + 112);
 
   push();
   translate(width / 2, height / 2 + 170);
   noFill();
-  stroke(THEME.accent2[0], THEME.accent2[1], THEME.accent2[2], 230);
+  stroke(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2]);
   strokeWeight(8);
   arc(0, 0, 46, 46, frameCount * 0.08, frameCount * 0.08 + PI * 1.4);
   pop();
@@ -722,40 +711,42 @@ function drawLoadingScreen() {
 function drawRoleCard(cfg) {
   let hover = cfg.enabled && pointInCenteredRect(mouseX, mouseY, cfg);
   let s = hover ? 1.03 : 1.0;
-  let borderCol = cfg.enabled ? (cfg.type === 'PIGEON' ? THEME.accent2 : THEME.accent) : [140, 146, 160];
 
   push();
   translate(cfg.cx, cfg.cy);
   scale(s);
 
-  drawGlassCard(0, 0, cfg.w, cfg.h, 152, 95, 24);
+  drawLightCard(0, 0, cfg.w, cfg.h, 245, 30);
 
-  noFill();
-  stroke(borderCol[0], borderCol[1], borderCol[2], cfg.enabled ? 210 : 80);
-  strokeWeight(3);
-  rectMode(CENTER);
-  rect(0, 0, cfg.w - 8, cfg.h - 8, 22);
+  if (cfg.enabled) {
+    noFill();
+    stroke(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2], 180);
+    strokeWeight(4);
+    rectMode(CENTER);
+    rect(0, 0, cfg.w - 10, cfg.h - 10, 26);
+  }
 
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(82);
-  text(cfg.emoji, 0, -62);
+  textSize(90);
+  text(cfg.emoji, 0, -50);
 
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
-  textSize(38);
+  fill(THEME.textDark[0]);
+  textSize(42);
   textStyle(BOLD);
-  text(cfg.title, 0, 20);
+  text(cfg.title, 0, 30);
   textStyle(NORMAL);
 
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
-  textSize(23);
-  text(cfg.desc, 0, 72);
+  fill(THEME.textSub[0]);
+  textSize(24);
+  text(cfg.desc, 0, 80);
 
   if (!cfg.enabled) {
-    fill(0, 0, 0, 120);
-    rect(0, 0, cfg.w, cfg.h, 24);
-    fill(255, 110, 110);
-    textSize(30);
+    fill(240, 240, 240, 200);
+    rectMode(CENTER);
+    rect(0, 0, cfg.w, cfg.h, 30);
+    fill(THEME.danger[0], THEME.danger[1], THEME.danger[2]);
+    textSize(34);
     textStyle(BOLD);
     text("선택 불가", 0, 0);
     textStyle(NORMAL);
@@ -765,8 +756,8 @@ function drawRoleCard(cfg) {
 }
 
 function drawRoleSelectionScreen() {
-  drawGradientBg(THEME.bgA, THEME.bgB);
-  drawMenuOrbs();
+  drawVibrantBg();
+  drawClouds();
 
   drawScreenTitle("역할 선택", "원하는 캐릭터를 선택하세요");
 
@@ -787,55 +778,63 @@ function drawRoleSelectionScreen() {
 }
 
 function drawWaitingScreen() {
-  drawGradientBg(THEME.bgA, THEME.bgC);
-  drawMenuOrbs();
-  drawScreenTitle("매칭 대기 중", "상대가 들어오면 자동으로 다음 단계로 이동");
+  drawVibrantBg();
+  drawClouds();
+  drawScreenTitle("매칭 대기 중", "상대가 들어오면 자동으로 다음 단계로 이동합니다");
 
-  drawGlassCard(width / 2, height / 2 + 80, 860, 260, 145, 85, 30);
+  drawLightCard(width / 2, height / 2 + 80, 860, 260, 245, 30);
 
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textAlign(CENTER, CENTER);
   textSize(42);
+  textStyle(BOLD);
   text("상대방 접속을 기다리는 중...", width / 2, height / 2 + 30);
+  textStyle(NORMAL);
 
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
+  fill(THEME.textSub[0]);
   textSize(30);
   text(`내 역할: ${myRole === 'PIGEON' ? '비둘기 🕊️' : '사람 😲'}`, width / 2, height / 2 + 95);
 
   let dotX = width / 2 - 54;
   for (let i = 0; i < 3; i++) {
     let a = 90 + 130 * max(0, sin(frameCount * 0.09 - i * 0.8));
-    fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], a);
-    ellipse(dotX + i * 54, height / 2 + 152, 20, 20);
+    fill(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2], a);
+    ellipse(dotX + i * 54, height / 2 + 160, 20, 20);
   }
 }
 
 function drawMainScreen() {
-  drawGradientBg(THEME.bgA, THEME.bgB);
-  drawMenuOrbs();
-  drawScreenTitle("게임 시작 준비", "클릭 후 3초 얼굴 정렬을 완료하면 시작");
+  drawVibrantBg();
+  drawClouds();
+  drawScreenTitle("게임 시작 준비", "클릭 후 얼굴 중앙 맞추기를 완료하면 게임이 시작됩니다");
 
-  drawGlassCard(width / 2, height / 2 + 36, 1020, 300, 150, 90, 30);
+  drawLightCard(width / 2, height / 2 + 40, 1020, 300, 245, 30);
 
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textAlign(CENTER, CENTER);
   textSize(52);
+  textStyle(BOLD);
   text("입벌려! 비둘기 똥 들어간다~", width / 2, height / 2 - 18);
+  textStyle(NORMAL);
 
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
+  fill(THEME.textSub[0]);
   textSize(30);
   text("가이드 박스에 얼굴을 맞추고 잠시 유지하세요", width / 2, height / 2 + 45);
 
-  uiHit.startBtn = drawButton(width / 2, height / 2 + 140, 360, 78, "캘리브레이션 시작", true, 'success');
+  uiHit.startBtn = drawButton(width / 2, height / 2 + 140, 360, 78, "시작하기", true, 'primary');
 }
 
 function drawGameOverScreen() {
   let win = (gameResult === 'TARGET_WIN' && myRole === 'TARGET') || (gameResult === 'PIGEON_WIN' && myRole === 'PIGEON');
 
-  drawGradientBg(win ? [18, 40, 34] : [44, 18, 26], win ? [34, 90, 66] : [110, 45, 65]);
-  drawMenuOrbs();
+  if (win) {
+    background(150, 255, 150);
+  } else {
+    background(255, 150, 150);
+  }
+  drawClouds();
 
-  drawGlassCard(width / 2, height / 2, 980, 540, 155, 95, 32);
+  drawLightCard(width / 2, height / 2, 980, 540, 245, 32);
 
   fill(win ? THEME.success[0] : THEME.danger[0], win ? THEME.success[1] : THEME.danger[1], win ? THEME.success[2] : THEME.danger[2]);
   textAlign(CENTER, CENTER);
@@ -844,46 +843,50 @@ function drawGameOverScreen() {
   text(win ? "WIN" : "LOSE", width / 2, height / 2 - 120);
   textStyle(NORMAL);
 
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textSize(40);
+  textStyle(BOLD);
   if (gameResult === 'TARGET_WIN') text("사람이 알 5개를 먹었습니다! 😲", width / 2, height / 2 + 10);
   else text("사람이 똥을 5번 맞았습니다! 🕊️", width / 2, height / 2 + 10);
+  textStyle(NORMAL);
 
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
+  fill(THEME.textSub[0]);
   textSize(26);
   text("다시하기를 누르면 역할 선택으로 돌아갑니다", width / 2, height / 2 + 72);
 
-  uiHit.restartBtn = drawButton(width / 2, height / 2 + 164, 290, 74, "다시하기", true, win ? 'success' : 'danger');
+  uiHit.restartBtn = drawButton(width / 2, height / 2 + 164, 290, 74, "다시하기", true, 'primary');
 }
 
 function drawWaitingSyncScreen() {
-  drawGradientBg(THEME.bgA, THEME.bgC);
-  drawMenuOrbs();
+  drawVibrantBg();
+  drawClouds();
 
-  drawScreenTitle("인식 완료", "상대방 인식 완료를 기다리는 중");
+  drawScreenTitle("인식 완료", "상대방 인식 완료를 기다리는 중입니다");
 
-  drawGlassCard(width / 2, height / 2 + 40, 860, 320, 150, 90, 30);
+  drawLightCard(width / 2, height / 2 + 40, 860, 320, 245, 30);
 
   textAlign(CENTER, CENTER);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textSize(44);
+  textStyle(BOLD);
   text("동기화 중...", width / 2, height / 2 - 48);
+  textStyle(NORMAL);
 
   let pReady = syncStatus.PIGEON;
   let tReady = syncStatus.TARGET;
 
-  fill(pReady ? THEME.success[0] : 255, pReady ? THEME.success[1] : 255, pReady ? THEME.success[2] : 255);
+  fill(pReady ? THEME.success[0] : THEME.textSub[0], pReady ? THEME.success[1] : THEME.textSub[1], pReady ? THEME.success[2] : THEME.textSub[2]);
   textSize(34);
   text(`비둘기: ${pReady ? '완료' : '대기중'}`, width / 2, height / 2 + 20);
 
-  fill(tReady ? THEME.success[0] : 255, tReady ? THEME.success[1] : 255, tReady ? THEME.success[2] : 255);
+  fill(tReady ? THEME.success[0] : THEME.textSub[0], tReady ? THEME.success[1] : THEME.textSub[1], tReady ? THEME.success[2] : THEME.textSub[2]);
   text(`사람: ${tReady ? '완료' : '대기중'}`, width / 2, height / 2 + 72);
 
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(220);
   rect(width / 2 - 220, height / 2 + 122, 440, 22, 999);
   let syncCount = (pReady ? 1 : 0) + (tReady ? 1 : 0);
-  fill(THEME.accent[0], THEME.accent[1], THEME.accent[2], 230);
+  fill(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2]);
   rect(width / 2 - 220, height / 2 + 122, 440 * (syncCount / 2), 22, 999);
 
   if (millis() - lastSyncEmitMs > 1000) {
@@ -893,16 +896,14 @@ function drawWaitingSyncScreen() {
 }
 
 function drawCalibrateScreen() {
-  background(28, 34, 52);
+  background(255);
   push();
-  tint(255, 80);
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0, width, height);
   pop();
-  noTint();
 
-  fill(8, 10, 18, 110);
+  fill(255, 255, 255, 160);
   rect(0, 0, width, height);
 
   if (predictions.length > 0) player.update(predictions[0].scaledMesh);
@@ -926,26 +927,30 @@ function drawCalibrateScreen() {
     return;
   }
 
-  drawGlassCard(width / 2, 86, 760, 112, 140, 75, 20);
+  drawLightCard(width / 2, 86, 760, 112, 240, 20);
   textAlign(CENTER, CENTER);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  fill(THEME.textDark[0]);
   textSize(34);
+  textStyle(BOLD);
   text("얼굴을 가이드 박스에 맞춰 3초 유지하세요", width / 2, 72);
+  textStyle(NORMAL);
 
   let remain = max(0, ceil((3000 - calibrationTimer) / 1000));
   fill(aligned ? THEME.success[0] : THEME.warning[0], aligned ? THEME.success[1] : THEME.warning[1], aligned ? THEME.success[2] : THEME.warning[2]);
   textSize(46);
-  text(aligned ? remain : "정렬 중...", width / 2, 108);
+  textStyle(BOLD);
+  text(aligned ? remain : "정렬 중...", width / 2, 115);
+  textStyle(NORMAL);
 
   rectMode(CENTER);
   noFill();
-  strokeWeight(6);
-  stroke(aligned ? color(95, 245, 135, 255) : color(255, 223, 118, 230));
-  rect(guideX, guideY, guideW, guideH, 22);
+  strokeWeight(8);
+  stroke(aligned ? color(80, 200, 120, 255) : color(250, 90, 150, 230));
+  rect(guideX, guideY, guideW, guideH, 30);
 
   noStroke();
-  fill(255, 255, 255, 55);
-  rect(guideX, guideY, guideW * 0.95, guideH * 0.95, 18);
+  fill(255, 255, 255, 80);
+  rect(guideX, guideY, guideW * 0.95, guideH * 0.95, 26);
 
   rectMode(CORNER);
 }
