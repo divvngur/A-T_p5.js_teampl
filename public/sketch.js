@@ -39,17 +39,15 @@ let clouds = [];
 
 // 밝고 쨍한 테마
 const THEME = {
-  bgA: [18, 24, 44],
-  bgB: [39, 78, 134],
-  bgC: [90, 62, 161],
-  card: [14, 20, 34],
-  text: [236, 243, 255],
-  sub: [173, 194, 226],
-  accent: [104, 232, 215],
-  accent2: [129, 120, 255],
-  success: [111, 235, 140],
-  danger: [255, 120, 133],
-  warning: [255, 212, 108]
+  sky: [135, 206, 250],        
+  card: [255, 255, 255],       
+  textDark: [40, 40, 40],      
+  textSub: [120, 120, 120],    
+  btnPrimary: [250, 90, 150],  
+  btnHover: [255, 120, 170],   
+  success: [80, 200, 120],     
+  danger: [255, 80, 80],       
+  warning: [255, 180, 50]      
 };
 
 let globalState = {
@@ -265,14 +263,19 @@ function drawButton(cx, cy, w, h, label, enabled = true, colorType = 'primary') 
   rectMode(CENTER);
   noStroke();
 
-  let col = hue === 'danger' ? THEME.danger : hue === 'success' ? THEME.success : THEME.accent2;
-  fill(col[0], col[1], col[2], enabled ? 230 : 90);
-  rect(0, 0, w, h, 18);
+  let col = colorType === 'danger' ? THEME.danger : colorType === 'success' ? THEME.success : THEME.btnPrimary;
+  
+  drawingContext.shadowColor = 'rgba(0,0,0,0.2)';
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowOffsetY = 4;
+  
+  fill(col[0], col[1], col[2], enabled ? 255 : 100);
+  rect(0, 0, w, h, 30);
+  
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowOffsetY = 0;
 
-  fill(255, 255, 255, enabled ? 34 : 15);
-  rect(0, -h * 0.18, w * 0.96, h * 0.36, 14);
-
-  fill(255, enabled ? 255 : 160);
+  fill(255, enabled ? 255 : 150);
   textAlign(CENTER, CENTER);
   textSize(32);
   textStyle(BOLD);
@@ -285,14 +288,23 @@ function drawButton(cx, cy, w, h, label, enabled = true, colorType = 'primary') 
 
 function drawScreenTitle(main, sub) {
   textAlign(CENTER, CENTER);
-  fill(THEME.text[0], THEME.text[1], THEME.text[2]);
+  
+  drawingContext.shadowColor = 'rgba(0,0,0,0.3)';
+  drawingContext.shadowBlur = 10;
+  drawingContext.shadowOffsetY = 4;
+  
+  fill(255);
   textStyle(BOLD);
-  textSize(76);
-  text(main, width / 2, 120);
+  textSize(84);
+  text(main, width / 2, 130);
+  
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowOffsetY = 0;
   textStyle(NORMAL);
-  fill(THEME.sub[0], THEME.sub[1], THEME.sub[2]);
-  textSize(30);
-  text(sub, width / 2, 180);
+  
+  fill(255);
+  textSize(32);
+  text(sub, width / 2, 210);
 }
 
 function videoReady() { sendFrameToSegmentation(); }
@@ -336,7 +348,8 @@ function draw() {
 }
 
 function playGame() {
-  background(100, 180, 240);
+  background(THEME.sky[0], THEME.sky[1], THEME.sky[2]);
+  drawClouds();
   noTint();
 
   if (poopCooldown > 0) poopCooldown--;
@@ -639,22 +652,7 @@ function drawSplatters() {
   }
 }
 
-function drawProgressBar(x, y, w, h, value, maxValue, col, label) {
-  let r = constrain(value / maxValue, 0, 1);
-  push();
-  rectMode(CORNER);
-  noStroke();
-  fill(255, 255, 255, 40);
-  rect(x, y, w, h, 999);
-  fill(col[0], col[1], col[2], 220);
-  rect(x, y, w * r, h, 999);
-  fill(240);
-  textAlign(CENTER, CENTER);
-  textSize(22);
-  text(`${label} ${value}/${maxValue}`, x + w / 2, y + h / 2 + 1);
-  pop();
-}
-
+// 인게임 UI (역할 안내창을 우측 상단으로 이동시켰습니다)
 function drawUI() {
   // 역할 안내 (우측 상단으로 이동 완료!)
   let roleCardX = width - 160; 
@@ -692,7 +690,7 @@ function drawLoadingScreen() {
 
   let pct = constrain(modelsLoaded / 2, 0, 1);
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(220);
   rect(width / 2 - 220, height / 2 + 55, 440, 26, 999);
   fill(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2]);
   rect(width / 2 - 220, height / 2 + 55, 440 * pct, 26, 999);
@@ -829,10 +827,14 @@ function drawMainScreen() {
 function drawGameOverScreen() {
   let win = (gameResult === 'TARGET_WIN' && myRole === 'TARGET') || (gameResult === 'PIGEON_WIN' && myRole === 'PIGEON');
 
-  drawGradientBg(win ? [18, 40, 34] : [44, 18, 26], win ? [34, 90, 66] : [110, 45, 65]);
-  drawMenuOrbs();
+  if (win) {
+    background(150, 255, 150);
+  } else {
+    background(255, 150, 150);
+  }
+  drawClouds();
 
-  drawGlassCard(width / 2, height / 2, 980, 540, 155, 95, 32);
+  drawLightCard(width / 2, height / 2, 980, 540, 245, 32);
 
   fill(win ? THEME.success[0] : THEME.danger[0], win ? THEME.success[1] : THEME.danger[1], win ? THEME.success[2] : THEME.danger[2]);
   textAlign(CENTER, CENTER);
@@ -873,15 +875,15 @@ function drawWaitingSyncScreen() {
   let pReady = syncStatus.PIGEON;
   let tReady = syncStatus.TARGET;
 
-  fill(pReady ? THEME.success[0] : 255, pReady ? THEME.success[1] : 255, pReady ? THEME.success[2] : 255);
+  fill(pReady ? THEME.success[0] : THEME.textSub[0], pReady ? THEME.success[1] : THEME.textSub[1], pReady ? THEME.success[2] : THEME.textSub[2]);
   textSize(34);
   text(`비둘기: ${pReady ? '완료' : '대기중'}`, width / 2, height / 2 + 20);
 
-  fill(tReady ? THEME.success[0] : 255, tReady ? THEME.success[1] : 255, tReady ? THEME.success[2] : 255);
+  fill(tReady ? THEME.success[0] : THEME.textSub[0], tReady ? THEME.success[1] : THEME.textSub[1], tReady ? THEME.success[2] : THEME.textSub[2]);
   text(`사람: ${tReady ? '완료' : '대기중'}`, width / 2, height / 2 + 72);
 
   noStroke();
-  fill(255, 255, 255, 45);
+  fill(220);
   rect(width / 2 - 220, height / 2 + 122, 440, 22, 999);
   let syncCount = (pReady ? 1 : 0) + (tReady ? 1 : 0);
   fill(THEME.btnPrimary[0], THEME.btnPrimary[1], THEME.btnPrimary[2]);
